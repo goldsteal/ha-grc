@@ -1,0 +1,35 @@
+#include <tunables/global>
+
+profile gridcoin_tui flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  # Network access (RPC to the daemon, ttyd HTTP/WebSocket, nginx proxy).
+  network,
+  capability,
+  signal (send) set=(kill,term,int,hup,cont),
+
+  # Start-up script and bashio helpers.
+  /run.sh r,
+  /bin/bash ix,
+  /usr/bin/env ix,
+  /usr/lib/bashio/** ix,
+  /usr/bin/bashio ix,
+
+  # Programs the add-on runs.
+  /usr/bin/ttyd ix,
+  /usr/sbin/nginx ix,
+  /usr/bin/gridcoinresearch-tui ix,
+
+  # Read-only system + config.
+  /etc/** r,
+  /usr/** r,
+  /bin/** ix,
+
+  # Writable runtime areas (nginx temp, ttyd, tmp).
+  /tmp/** rwk,
+  /var/** rwk,
+  /run/** rwk,
+  /dev/tty rw,
+  /dev/ptmx rw,
+  /dev/pts/* rw,
+}

@@ -1,0 +1,30 @@
+name: Gridcoin TUI
+version: "0.1.0"
+slug: gridcoin_tui
+description: >-
+  Web terminal exposing the Gridcoin Research TUI, embeddable in Lovelace
+  dashboards through Home Assistant ingress.
+url: https://github.com/goldsteal/ha-grc
+arch:
+  - amd64
+init: false
+ingress: true
+ingress_port: 7681
+panel_icon: mdi:pickaxe
+panel_title: Gridcoin TUI
+options:
+  mode: internal
+  rpc_host: 192.0.2.10
+  rpc_port: 15715
+  rpc_user: grc-tui
+  rpc_password: ""
+  refresh: 10s
+  external_ttyd_url: ""
+schema:
+  mode: list(internal|proxy)
+  rpc_host: str
+  rpc_port: port
+  rpc_user: str
+  rpc_password: password
+  refresh: str
+  external_ttyd_url: str?

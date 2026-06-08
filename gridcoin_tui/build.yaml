@@ -1,0 +1,4 @@
+build_from:
+  amd64: ghcr.io/hassio-addons/base:stable
+labels:
+  org.opencontainers.image.source: https://github.com/goldsteal/ha-grc

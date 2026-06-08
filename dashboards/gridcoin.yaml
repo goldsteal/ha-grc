@@ -1,0 +1,67 @@
+# Example Lovelace dashboard. Add as a new dashboard (Settings > Dashboards >
+# add > "Edit in YAML"), or paste individual cards into an existing view.
+#
+# Entity IDs assume the device is named "Gridcoin Wallet" (the default). Adjust
+# if you renamed the device. The TUI/web-client cards are described below.
+title: Gridcoin
+views:
+  - title: Wallet
+    path: gridcoin
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: heading
+            heading: Balances
+
+          - type: glance
+            columns: 3
+            entities:
+              - entity: sensor.gridcoin_wallet_total_balance
+                name: Total
+              - entity: sensor.gridcoin_wallet_balance
+                name: Available
+              - entity: sensor.gridcoin_wallet_stake
+                name: Staking
+
+          - type: entities
+            title: Status
+            entities:
+              - entity: binary_sensor.gridcoin_wallet_staking
+              - entity: binary_sensor.gridcoin_wallet_sync_status
+              - entity: sensor.gridcoin_wallet_time_to_stake
+              - entity: sensor.gridcoin_wallet_block_height
+              - entity: sensor.gridcoin_wallet_connections
+
+          - type: gauge
+            entity: sensor.gridcoin_wallet_staking_efficiency
+            name: Staking efficiency
+            min: 0
+            max: 100
+            needle: true
+            severity:
+              green: 80
+              yellow: 50
+              red: 0
+
+      # ---- "Whole wallet" view 1: the gridcoin-tui terminal ----
+      #
+      # If you run the "Gridcoin TUI" add-on (ingress), embed it with the
+      # custom card https://github.com/lovelylain/ha-addon-iframe-card :
+      #
+      #   - type: custom:ha-addon-iframe-card
+      #     addon: <local addon slug>_gridcoin_tui   # see add-on URL/slug
+      #     aspect_ratio: 75%
+      #
+      # If you run the standalone docker container instead, use a plain webpage
+      # card pointing at ttyd (host running the container):
+      - type: iframe
+        url: http://192.0.2.10:7681
+        title: Gridcoin TUI
+        aspect_ratio: 75%
+
+      # ---- "Whole wallet" view 2: the Gridcoin Web Client GUI ----
+      # Uncomment once the gridcoin-web-client container is running:
+      # - type: iframe
+      #   url: http://192.0.2.10:8080
+      #   title: Gridcoin Web Client
+      #   aspect_ratio: 100%

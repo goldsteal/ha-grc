@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Lint
+        run: ruff check custom_components/gridcoin
+      - name: Compile
+        run: python -m compileall -q custom_components/gridcoin
+      - name: Validate JSON
+        run: |
+          python - <<'PY'
+          import glob, json
+          for f in glob.glob("**/*.json", recursive=True):
+              json.load(open(f))
+          print("all JSON valid")
+          PY
+
+  addon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build add-on image
+        run: |
+          docker build \
+            --build-arg BUILD_FROM=ghcr.io/hassio-addons/base:stable \
+            -t gridcoin-tui-addon gridcoin_tui
+      - name: Build standalone image
+        run: docker build -t gridcoin-tui-standalone docker

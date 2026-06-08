@@ -1,0 +1,53 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to your Gridcoin wallet",
+        "description": "Enter the JSON-RPC details from your gridcoinresearch.conf. The daemon must allow connections from Home Assistant (rpcallowip).",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "username": "RPC username",
+          "password": "RPC password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the daemon. Check the host, port and that rpcallowip permits Home Assistant.",
+      "invalid_auth": "Invalid RPC username or password."
+    },
+    "abort": {
+      "already_configured": "This wallet is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Gridcoin options",
+        "data": {
+          "scan_interval": "Poll interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "balance": { "name": "Balance" },
+      "stake": { "name": "Stake" },
+      "newmint": { "name": "Immature (new mint)" },
+      "total_balance": { "name": "Total balance" },
+      "block_height": { "name": "Block height" },
+      "connections": { "name": "Connections" },
+      "difficulty": { "name": "Difficulty" },
+      "money_supply": { "name": "Money supply" },
+      "net_stake_weight": { "name": "Network stake weight" },
+      "my_stake_weight": { "name": "My stake weight" },
+      "time_to_stake": { "name": "Estimated time to stake" },
+      "staking_efficiency": { "name": "Staking efficiency" }
+    },
+    "binary_sensor": {
+      "staking": { "name": "Staking" },
+      "in_sync": { "name": "Sync status" }
+    }
+  }
+}
