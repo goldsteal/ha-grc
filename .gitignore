@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 docker/.env
 .env
+
+# Local-only helper that handles real credentials — never commit.
+deploy-local.sh
+*.local.json
