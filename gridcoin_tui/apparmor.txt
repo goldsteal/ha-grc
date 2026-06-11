@@ -3,33 +3,41 @@
 profile gridcoin_tui flags=(attach_disconnected,mediate_deleted) {
   #include <abstractions/base>
 
-  # Network access (RPC to the daemon, ttyd HTTP/WebSocket, nginx proxy).
-  network,
+  # Capabilities
+  file,
   capability,
+  network,
   signal (send) set=(kill,term,int,hup,cont),
 
-  # Start-up script and bashio helpers.
-  /run.sh r,
-  /bin/bash ix,
-  /usr/bin/env ix,
+  # S6-Overlay
+  /init ix,
+  /bin/** ix,
+  /usr/bin/** ix,
+  /run/{s6,s6-rc*,service}/** ix,
+  /package/** ix,
+  /command/** ix,
+  /etc/services.d/** rwix,
+  /etc/cont-init.d/** rwix,
+  /etc/cont-finish.d/** rwix,
+  /run/{,**} rwk,
+  /dev/tty rw,
+
+  # Bashio
   /usr/lib/bashio/** ix,
-  /usr/bin/bashio ix,
+  /tmp/** rwk,
+
+  # Access to options.json and other files within /data
+  /data/** rw,
+
+  # Start-up script
+  /run.sh rix,
 
   # Programs the add-on runs.
-  /usr/bin/ttyd ix,
-  /usr/sbin/nginx ix,
-  /usr/bin/gridcoinresearch-tui ix,
+  /usr/bin/ttyd rix,
+  /usr/sbin/nginx rix,
+  /usr/bin/gridcoinresearch-tui rix,
 
-  # Read-only system + config.
-  /etc/** r,
-  /usr/** r,
-  /bin/** ix,
-
-  # Writable runtime areas (nginx temp, ttyd, tmp).
-  /tmp/** rwk,
-  /var/** rwk,
-  /run/** rwk,
-  /dev/tty rw,
+  # Terminal devices for ttyd sessions.
   /dev/ptmx rw,
   /dev/pts/* rw,
 }

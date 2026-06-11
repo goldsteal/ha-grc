@@ -1,5 +1,5 @@
 name: Gridcoin TUI
-version: "0.1.0"
+version: "0.1.1"
 slug: gridcoin_tui
 description: >-
   Web terminal exposing the Gridcoin Research TUI, embeddable in Lovelace
