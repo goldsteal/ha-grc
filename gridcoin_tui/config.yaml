@@ -1,5 +1,5 @@
 name: Gridcoin TUI
-version: "0.1.1"
+version: "0.1.2"
 slug: gridcoin_tui
 description: >-
   Web terminal exposing the Gridcoin Research TUI, embeddable in Lovelace
@@ -10,7 +10,9 @@ arch:
 init: false
 ingress: true
 ingress_port: 7681
-panel_icon: mdi:pickaxe
+# Custom icon set; needs the grc-icons.js Lovelace resource on the HA
+# instance (see dashboards/), otherwise the sidebar icon renders blank.
+panel_icon: grc:gridcoin
 panel_title: Gridcoin TUI
 options:
   mode: internal
