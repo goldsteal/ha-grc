@@ -1,5 +1,5 @@
 name: Gridcoin TUI
-version: "0.1.3"
+version: "0.1.4"
 slug: gridcoin_tui
 description: >-
   Web terminal exposing the Gridcoin Research TUI, embeddable in Lovelace
@@ -10,11 +10,11 @@ arch:
 init: false
 ingress: true
 ingress_port: 7681
-# Sidebar uses a built-in MDI glyph: the sidebar renders at app startup,
-# before any Lovelace dashboard (and its grc-icons.js resource) loads, so a
-# custom grc: icon would render blank there. The real grc:gridcoin SVG still
-# works inside dashboard cards (see dashboards/).
-panel_icon: mdi:hexagon-slice-6
+# Real Gridcoin logo. Resolves in the sidebar because the gridcoin_icons
+# integration (custom_components/) loads grc-icons.js via add_extra_js_url at
+# frontend startup, before the sidebar renders. Without that integration this
+# would render blank (a Lovelace resource loads too late for the sidebar).
+panel_icon: grc:gridcoin
 panel_title: Gridcoin TUI
 options:
   mode: internal
