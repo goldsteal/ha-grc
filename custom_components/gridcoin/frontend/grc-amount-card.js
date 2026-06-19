@@ -15,8 +15,8 @@
  *    halförds is exact.
  *  - Each denomination is just a fixed decimal-place shift of the halförd
  *    integer (GRC 8, mGRC 5, µGRC 2, halförd 0), so every conversion is an exact
- *    integer op. Standard notation rounds half-up; scientific notation rounds
- *    the mantissa to `decimals`+1 significant figures.
+ *    integer op. Decimal notation rounds half-up; the exponential notations
+ *    (e / ×10ⁿ / engineering) round the mantissa to `decimals`+1 sig figures.
  *  - "halförd"/"hal"/"hals" and the Ǥ glyph are project display conventions, not
  *    official Gridcoin notation (ticker is GRC). The halförd pluralizes: 1 → hal
  *    (halförd), otherwise hals (halförds); GRC/mGRC/µGRC tickers don't.
@@ -30,7 +30,10 @@
  *   denoms: [GRC, mGRC, µGRC, halförd]   # rows in the stack
  *   active: GRC           # highlighted row (defaults to `primary`)
  *   decimals: 8           # max fractional / mantissa digits
- *   scientific: false     # true → scientific notation (e.g. 1.2005e9)
+ *   notation: decimal     # decimal | scientific_e (1.2005e9) |
+ *                         # scientific_pow (1.2005 × 10⁹) | engineering
+ *                         # (1.2005 × 10⁹, exponent a multiple of 3).
+ *                         # Legacy `scientific: true` still maps to scientific_e.
  *   plural: auto          # halförd form: auto (hal/hals) | singular | plural
  *   number_format: language  # decimal/thousands separators; follows the user's
  *                            # HA setting. Override by separator pattern:
@@ -121,9 +124,18 @@ function placeDecimal(n, dec, sep = SEP_DEFAULT) {
   return (neg ? '-' : '') + (frac ? `${int}${sep.decimal}${frac}` : int);
 }
 
-/** Scientific notation of (BigInt halförds / 10^dec), mantissa ≤ `sig` digits. */
-function toScientific(halfords, dec, sig, sep = SEP_DEFAULT) {
-  if (halfords === 0n) return '0';
+// Unicode superscripts for the `× 10ⁿ` exponent of the scientific/engineering
+// notations (the `e` notation keeps an ASCII exponent).
+const SUPERSCRIPT = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴',
+                      5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+const toSuperscript = (n) => String(n).split('').map((c) => SUPERSCRIPT[c] || c).join('');
+
+/** Significant digits + base-10 exponent of (BigInt halförds / 10^dec), mantissa
+ *  rounded to ≤ `sig` significant digits. Returns {neg, digits, exp} where the
+ *  value is ± `digits[0].digits[1…]` × 10^exp (digits has no trailing zeros), or
+ *  null when the amount is zero. */
+function sciParts(halfords, dec, sig) {
+  if (halfords === 0n) return null;
   const neg = halfords < 0n;
   let digits = (neg ? -halfords : halfords).toString();
   let exp = digits.length - 1 - dec;
@@ -133,13 +145,38 @@ function toScientific(halfords, dec, sig, sep = SEP_DEFAULT) {
     if (rs.length > sig) { exp += 1; rs = rs.slice(0, sig); } // carry, e.g. 99→100
     digits = rs;
   }
-  const frac = digits.slice(1).replace(/0+$/, '');
-  return `${neg ? '-' : ''}${digits[0]}${frac ? sep.decimal + frac : ''}e${exp}`;
+  digits = digits.replace(/0+$/, '') || '0';
+  return { neg, digits, exp };
+}
+
+/** Render sciParts as one of the exponential notations:
+ *   scientific_e   → 1.264843e7        (ASCII `e`, mantissa 1 ≤ |m| < 10)
+ *   scientific_pow → 1.264843 × 10⁷    (superscript, mantissa 1 ≤ |m| < 10)
+ *   engineering    → 12.64843 × 10⁶    (superscript, exponent a multiple of 3) */
+function formatScientific(parts, sep, notation) {
+  if (parts === null) return '0';
+  const { neg, digits, exp } = parts;
+  const sign = neg ? '-' : '';
+  if (notation === 'engineering') {
+    const eng = Math.floor(exp / 3) * 3;     // exponent snapped down to a multiple of 3
+    const intLen = exp - eng + 1;            // 1–3 digits left of the point
+    const padded = digits.padEnd(intLen, '0');
+    const frac = padded.slice(intLen).replace(/0+$/, '');
+    const mant = frac ? `${padded.slice(0, intLen)}${sep.decimal}${frac}` : padded.slice(0, intLen);
+    return `${sign}${mant} × 10${toSuperscript(eng)}`;
+  }
+  const frac = digits.slice(1); // already trailing-trimmed
+  const mant = frac ? `${digits[0]}${sep.decimal}${frac}` : digits[0];
+  return notation === 'scientific_pow'
+    ? `${sign}${mant} × 10${toSuperscript(exp)}`
+    : `${sign}${mant}e${exp}`;
 }
 
 /** Format BigInt halförds in a denomination. */
-function formatHalfords(halfords, denom, { maxDecimals = 8, scientific = false, sep = SEP_DEFAULT } = {}) {
-  if (scientific) return toScientific(halfords, denom.dec, maxDecimals + 1, sep);
+function formatHalfords(halfords, denom, { maxDecimals = 8, notation = 'decimal', sep = SEP_DEFAULT } = {}) {
+  if (notation !== 'decimal') {
+    return formatScientific(sciParts(halfords, denom.dec, maxDecimals + 1), sep, notation);
+  }
   const show = Math.min(maxDecimals, denom.dec);
   const scaled = denom.dec > show
     ? roundDiv(halfords, 10n ** BigInt(denom.dec - show))
@@ -172,14 +209,14 @@ function textUnit(denom, halfords, units, plural) {
 }
 
 function conversionStack(halfords, opts = {}) {
-  const { denoms, active, maxDecimals = 8, scientific = false,
+  const { denoms, active, maxDecimals = 8, notation = 'decimal',
           units = ['glyph'], icon = '', plural = 'auto', sep = SEP_DEFAULT } = opts;
   const ids = denoms || DENOMINATIONS.map((d) => d.id);
   return DENOMINATIONS.filter((d) => ids.includes(d.id)).map((d) => ({
     id: d.id,
     iconHtml: iconHtml(units, icon),
     unit: textUnit(d, halfords, units, plural),
-    formatted: formatHalfords(halfords, d, { maxDecimals, scientific, sep }),
+    formatted: formatHalfords(halfords, d, { maxDecimals, notation, sep }),
     active: d.id === active,
   }));
 }
@@ -193,12 +230,15 @@ class GrcAmountCard extends HTMLElement {
       hover: true,
       denoms: DENOMINATIONS.map((d) => d.id),
       decimals: 8,
-      scientific: false,
+      notation: 'decimal',
       plural: 'auto',
       number_format: 'language',
       icon: 'grc:gridcoin',
       ...config,
     };
+    // Legacy boolean `scientific: true` ⇒ the `e` notation (now one of four modes:
+    // decimal | scientific_e | scientific_pow | engineering).
+    if (config.notation === undefined && config.scientific === true) c.notation = 'scientific_e';
     // `icon` is the logo name; the 'icon' representation is toggled per context
     // via base_units / hover_units. Migrate the legacy `glyph`/`icon` options.
     if (c.icon === true) c.icon = 'grc:gridcoin';
@@ -229,14 +269,14 @@ class GrcAmountCard extends HTMLElement {
     const name = cfg.name || st.attributes.friendly_name || cfg.entity;
     const sep = resolveSeparators(cfg.number_format, this._hass);
     const primary = DENOMINATIONS.find((d) => d.id === cfg.primary) || DENOMINATIONS[0];
-    const big = formatHalfords(halfords, primary, { maxDecimals: cfg.decimals, scientific: cfg.scientific, sep });
+    const big = formatHalfords(halfords, primary, { maxDecimals: cfg.decimals, notation: cfg.notation, sep });
     const baseIcon = iconHtml(cfg.base_units, cfg.icon);
     const unit = textUnit(primary, halfords, cfg.base_units, cfg.plural);
 
     const stackHtml = (cfg.hover
       ? conversionStack(halfords, {
           denoms: cfg.denoms, active: cfg.active,
-          maxDecimals: cfg.decimals, scientific: cfg.scientific,
+          maxDecimals: cfg.decimals, notation: cfg.notation,
           units: cfg.hover_units, icon: cfg.icon, plural: cfg.plural, sep,
         })
       : []
@@ -334,10 +374,15 @@ const EDITOR_SCHEMA = [
     { value: 'space_comma', label: '1 234,56 (France, Sweden)' },
     { value: 'none', label: '1234.56 (no grouping)' },
   ] } } },
+  { name: 'notation', selector: { select: { mode: 'dropdown', options: [
+    { value: 'decimal', label: 'Decimal (1,264.843)' },
+    { value: 'scientific_e', label: 'Scientific (e): 1.264843e7' },
+    { value: 'scientific_pow', label: 'Scientific (×10ⁿ): 1.264843 × 10⁷' },
+    { value: 'engineering', label: 'Engineering: 12.64843 × 10⁶' },
+  ] } } },
   { type: 'grid', schema: [
     { name: 'decimals', selector: { number: { min: 0, max: 8, mode: 'box' } } },
     { name: 'hover', selector: { boolean: {} } },
-    { name: 'scientific', selector: { boolean: {} } },
   ] },
 ];
 
@@ -354,7 +399,7 @@ const EDITOR_LABELS = {
   number_format: 'Number format (decimal / thousands)',
   decimals: 'Max decimals',
   hover: 'Show hover conversions',
-  scientific: 'Scientific notation',
+  notation: 'Number notation',
 };
 
 class GrcAmountCardEditor extends HTMLElement {

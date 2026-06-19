@@ -166,7 +166,7 @@ The same amount, rendered with different options:
 | `icon` | `grc:gridcoin` | Logo used by the `icon` unit form. |
 | `active` | = `primary` | Denomination highlighted in the stack. |
 | `decimals` | `8` | Max decimals before rounding. |
-| `scientific` | `false` | Scientific notation (e.g. `1.264843e7`). |
+| `notation` | `decimal` | Number form: `decimal`, `scientific_e` (`1.264843e7`), `scientific_pow` (`1.264843 × 10⁷`), or `engineering` (`12.64843 × 10⁶`, exponent a multiple of 3). Legacy `scientific: true` still maps to `scientific_e`. |
 | `plural` | `auto` | Halförd plural: `auto` / `singular` / `plural`. |
 | `number_format` | `language` | Separators: follow HA (`language`), or force `1,234.56`, `1.234,56`, `1 234,56`, `1234.56`. |
 
