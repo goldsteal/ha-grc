@@ -298,7 +298,7 @@ class GrcAmountCard extends HTMLElement {
   }
 }
 
-customElements.define('grc-amount-card', GrcAmountCard);
+if (!customElements.get('grc-amount-card')) customElements.define('grc-amount-card', GrcAmountCard);
 
 // ── GUI config editor (ha-form based) ────────────────────────────────────────
 const DENOM_OPTIONS = DENOMINATIONS.map((d) => ({ value: d.id, label: d.id }));
@@ -381,11 +381,13 @@ class GrcAmountCardEditor extends HTMLElement {
   }
 }
 
-customElements.define('grc-amount-card-editor', GrcAmountCardEditor);
+if (!customElements.get('grc-amount-card-editor')) customElements.define('grc-amount-card-editor', GrcAmountCardEditor);
 
 window.customCards = window.customCards || [];
-window.customCards.push({
-  type: 'grc-amount-card',
-  name: 'Gridcoin Amount',
-  description: 'A Gridcoin balance with an optional hover conversion-stack (GRC · mGRC · µGRC · halförd).',
-});
+if (!window.customCards.some((c) => c.type === 'grc-amount-card')) {
+  window.customCards.push({
+    type: 'grc-amount-card',
+    name: 'Gridcoin Amount',
+    description: 'A Gridcoin balance with an optional hover conversion-stack (GRC · mGRC · µGRC · halförd).',
+  });
+}
