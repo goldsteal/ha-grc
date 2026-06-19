@@ -6,6 +6,11 @@ on your dashboard, plus the full **`gridcoin-tui`** wallet view embedded in the 
 Everything talks to the wallet daemon over JSON-RPC (`gridcoinresearch.conf`).
 This repo is verified against a daemon at `192.0.2.10:15715`.
 
+![The Gridcoin dashboard in Home Assistant](docs/images/dashboard.png)
+
+> All amounts and addresses shown in the screenshots below are placeholder
+> values, not real holdings.
+
 ## What's in the box
 
 | Part | Folder | What it does |
@@ -35,7 +40,12 @@ and restart.
 
 ## 2. The wallet view — three ways to run the TUI
 
-You asked for three deployment shapes; here they are:
+The `gridcoin-tui` terminal wallet — balances, your addresses, and recent
+transactions — embedded in Home Assistant:
+
+![The gridcoin-tui terminal wallet](docs/images/tui.png)
+
+There are three deployment shapes:
 
 1. **HAOS add-on, internal mode** *(recommended for HAOS)* — the
    add-on runs the bundled TUI binary itself.
@@ -89,6 +99,41 @@ badges:
 The same block is included at the top of `dashboards/gridcoin.yaml`. Any of the
 `sensor.gridcoin_wallet_*` entities work as badges or in a `glance`/`gauge`/
 `entities` card.
+
+### The `grc-amount-card`
+
+The integration also ships a custom Lovelace card, **`grc-amount-card`**, that
+shows a GRC amount with an optional hover **conversion stack** across the
+denomination ladder — GRC (`Ǥ`), mGRC, µGRC, and the halförd (`hal`, the `1e-8`
+protocol floor). Add it from the card picker (*Gridcoin Amount*) or in YAML:
+
+```yaml
+type: custom:grc-amount-card
+entity: sensor.gridcoin_wallet_total_balance
+name: Total
+```
+
+The same amount, rendered with different options:
+
+![grc-amount-card option variants](docs/images/grc-amount-card-options.png)
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `entity` | — | **Required.** A GRC-valued sensor. |
+| `name` | entity name | Card label. |
+| `primary` | `GRC` | Unit of the big number: `GRC`, `mGRC`, `µGRC`, or `halförd`. |
+| `hover` | `true` | Show the hover conversion stack. |
+| `denoms` | all four | Which denominations appear in the stack. |
+| `base_units` / `hover_units` | `[glyph]` | How the unit is shown — any mix of `glyph` (Ǥ), `ticker` (GRC), `icon` (logo). |
+| `icon` | `grc:gridcoin` | Logo used by the `icon` unit form. |
+| `active` | = `primary` | Denomination highlighted in the stack. |
+| `decimals` | `8` | Max decimals before rounding. |
+| `scientific` | `false` | Scientific notation (e.g. `1.264843e7`). |
+| `plural` | `auto` | Halförd plural: `auto` / `singular` / `plural`. |
+| `number_format` | `language` | Separators: follow HA (`language`), `comma_decimal`, `decimal_comma`, `space_comma`, `none`. |
+
+Amounts are computed in exact integer halförds (BigInt), so conversions never
+drift, and a GUI editor is included for every option.
 
 ## Notes & caveats
 
