@@ -6,3 +6,7 @@ docker/.env
 # Local-only helper that handles real credentials — never commit.
 deploy-local.sh
 *.local.json
+
+# TUI binary is built from source in the Docker image, never committed
+gridcoin_tui/rootfs/usr/bin/gridcoinresearch-tui
+docker/gridcoinresearch-tui

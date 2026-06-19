@@ -140,7 +140,10 @@ drift, and a GUI editor is included for every option.
 
 ## Notes & caveats
 
-- The bundled `gridcoinresearch-tui` binary is **amd64**, statically linked Go.
+- The `gridcoinresearch-tui` terminal is **compiled from source** (gridcat,
+  `v1.3.0`, MIT) for each supported architecture during the image build — no
+  binary is vendored in this repo. Pin a different upstream tag with the
+  `TUI_VERSION` build arg.
 - RPC credentials live in HA config / add-on options — keep your HA instance
   trusted; prefer a dedicated read-mostly RPC user.
 

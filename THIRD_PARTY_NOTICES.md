@@ -4,13 +4,14 @@ This project bundles and/or builds the following third-party software.
 
 ## gridcoinresearch-tui
 
-The terminal wallet UI shipped by the **Gridcoin TUI** add-on
-(`gridcoin_tui/rootfs/usr/bin/gridcoinresearch-tui`) and the standalone
-container (`docker/gridcoinresearch-tui`) is **gridcoinresearch-tui** by
-**gridcat**.
+The terminal wallet UI shipped by the **Gridcoin TUI** add-on and the
+standalone container (`docker/`) is **gridcoinresearch-tui** by **gridcat**.
+It is compiled from upstream source during the Docker image build (see
+`gridcoin_tui/Dockerfile` and `docker/Dockerfile`) rather than vendored as a
+binary.
 
 - Upstream: https://github.com/gridcat/gridcoinresearch-tui
-- Bundled version: v1.3.0
+- Built from tag: v1.3.0 (pinned via the `TUI_VERSION` build arg)
 - License: MIT
 
 ```

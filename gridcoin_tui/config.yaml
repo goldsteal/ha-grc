@@ -1,12 +1,15 @@
 name: Gridcoin TUI
-version: "0.1.5"
+version: "0.2.0"
 slug: gridcoin_tui
 description: >-
   Web terminal exposing the Gridcoin Research TUI, embeddable in Lovelace
   dashboards through Home Assistant ingress.
 url: https://github.com/goldsteal/ha-grc
 arch:
+  - aarch64
   - amd64
+  - armv7
+  - i386
 init: false
 ingress: true
 ingress_port: 7681
