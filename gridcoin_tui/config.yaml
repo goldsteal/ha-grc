@@ -1,5 +1,5 @@
 name: Gridcoin TUI
-version: "0.1.4"
+version: "0.1.5"
 slug: gridcoin_tui
 description: >-
   Web terminal exposing the Gridcoin Research TUI, embeddable in Lovelace
@@ -10,10 +10,16 @@ arch:
 init: false
 ingress: true
 ingress_port: 7681
-# Real Gridcoin logo. Resolves in the sidebar because the gridcoin_icons
-# integration (custom_components/) loads grc-icons.js via add_extra_js_url at
-# frontend startup, before the sidebar renders. Without that integration this
-# would render blank (a Lovelace resource loads too late for the sidebar).
+# ttyd is also published directly on a host port so the terminal can be
+# embedded in a Lovelace iframe card (HA ingress can't be iframed without a
+# sidebar panel + a session cookie). NOTE: this exposes the writable wallet
+# terminal on the LAN without Home Assistant authentication.
+ports:
+  "7681/tcp": 7681
+ports_description:
+  "7681/tcp": "ttyd web terminal (direct, unauthenticated — for dashboard embedding)"
+# panel_icon/panel_title only matter when the ingress sidebar panel is enabled
+# (ingress_panel); access is via the dashboard "Terminal" tab instead.
 panel_icon: grc:gridcoin
 panel_title: Gridcoin TUI
 options:
