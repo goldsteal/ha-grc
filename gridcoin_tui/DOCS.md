@@ -32,6 +32,8 @@ reverse proxy, so you still get Home Assistant authentication.
 ## Notes
 - The wallet daemon must allow RPC from the add-on's IP (`rpcallowip` in
   `gridcoinresearch.conf`).
+- The bundled terminal wallet is [gridcoinresearch-tui](https://github.com/gridcat/gridcoinresearch-tui)
+  by gridcat (MIT). See `THIRD_PARTY_NOTICES.md`.
 - The bundled binary is **amd64** only.
 - After starting, click **OPEN WEB UI** or use the sidebar panel. To embed it in
   a dashboard, see the project README (uses `ha-addon-iframe-card`).

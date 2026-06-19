@@ -45,6 +45,9 @@ transactions — embedded in Home Assistant:
 
 ![The gridcoin-tui terminal wallet](docs/images/tui.png)
 
+> The terminal wallet is **[gridcoinresearch-tui](https://github.com/gridcat/gridcoinresearch-tui)**
+> by gridcat (MIT) — see [Credits](#credits).
+
 There are three deployment shapes:
 
 1. **HAOS add-on, internal mode** *(recommended for HAOS)* — the
@@ -140,6 +143,13 @@ drift, and a GUI editor is included for every option.
 - The bundled `gridcoinresearch-tui` binary is **amd64**, statically linked Go.
 - RPC credentials live in HA config / add-on options — keep your HA instance
   trusted; prefer a dedicated read-mostly RPC user.
+
+## Credits
+
+The embedded terminal wallet is **[gridcoinresearch-tui](https://github.com/gridcat/gridcoinresearch-tui)**
+by **gridcat**, MIT-licensed (bundled v1.3.0). This project wraps it for Home
+Assistant; full license text is in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Tip jar
 
