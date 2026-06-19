@@ -133,7 +133,10 @@ The same amount, rendered with different options:
 | `decimals` | `8` | Max decimals before rounding. |
 | `scientific` | `false` | Scientific notation (e.g. `1.264843e7`). |
 | `plural` | `auto` | Halförd plural: `auto` / `singular` / `plural`. |
-| `number_format` | `language` | Separators: follow HA (`language`), `comma_decimal`, `decimal_comma`, `space_comma`, `none`. |
+| `number_format` | `language` | Separators: follow HA (`language`), or force `1,234.56`, `1.234,56`, `1 234,56`, `1234.56`. |
+
+Common examples: `1,234.56` (US, UK), `1.234,56` (Spain, Germany,
+Italy), `1 234,56` (France, Sweden), and `1234.56` (no grouping).
 
 Amounts are computed in exact integer halförds (BigInt), so conversions never
 drift, and a GUI editor is included for every option.

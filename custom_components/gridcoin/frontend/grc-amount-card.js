@@ -33,8 +33,10 @@
  *   scientific: false     # true → scientific notation (e.g. 1.2005e9)
  *   plural: auto          # halförd form: auto (hal/hals) | singular | plural
  *   number_format: language  # decimal/thousands separators; follows the user's
- *                            # HA setting. Override: comma_decimal (1,234.56) |
- *                            # decimal_comma (1.234,56) | space_comma (1 234,56) |
+ *                            # HA setting. Override by separator pattern:
+ *                            # comma_decimal (1,234.56; US/UK) |
+ *                            # decimal_comma (1.234,56; Spain/Germany/Italy) |
+ *                            # space_comma (1 234,56; France/Sweden) |
  *                            # none (1234.56)
  *   # how the unit is shown — any combination of glyph / ticker / icon, set
  *   # independently for the base line and the hover rows:
@@ -71,7 +73,8 @@ function grcToHalfords(grcStr) {
 
 // Number formatting follows locale conventions: a group (thousands) separator
 // and a decimal separator. Mirrors Home Assistant's own NumberFormat setting
-// (hass.locale.number_format) so a German wallet shows 1.234,56 with no config.
+// (hass.locale.number_format), so decimal-comma locales such as Spain, Germany,
+// or Italy show 1.234,56 with no config.
 const SEP_DEFAULT = { group: ',', decimal: '.' };
 const SEP_FIXED = {
   comma_decimal: { group: ',', decimal: '.' },       // 1,234.56
@@ -325,11 +328,11 @@ const EDITOR_SCHEMA = [
     { value: 'plural', label: 'Always plural (hals)' },
   ] } } },
   { name: 'number_format', selector: { select: { mode: 'dropdown', options: [
-    { value: 'language', label: 'Follow Home Assistant setting' },
-    { value: 'comma_decimal', label: '1,234.56' },
-    { value: 'decimal_comma', label: '1.234,56' },
-    { value: 'space_comma', label: '1 234,56' },
-    { value: 'none', label: '1234.56' },
+    { value: 'language', label: 'Auto: Home Assistant locale' },
+    { value: 'comma_decimal', label: '1,234.56 (US, UK)' },
+    { value: 'decimal_comma', label: '1.234,56 (Spain, Germany, Italy)' },
+    { value: 'space_comma', label: '1 234,56 (France, Sweden)' },
+    { value: 'none', label: '1234.56 (no grouping)' },
   ] } } },
   { type: 'grid', schema: [
     { name: 'decimals', selector: { number: { min: 0, max: 8, mode: 'box' } } },
