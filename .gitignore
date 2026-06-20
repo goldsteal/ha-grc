@@ -10,3 +10,7 @@ deploy-local.sh
 # TUI binary is built from source in the Docker image, never committed
 gridcoin_tui/rootfs/usr/bin/gridcoinresearch-tui
 docker/gridcoinresearch-tui
+
+# Local announcement drafts — not part of the project
+reddit-post.txt
+discord-post.txt
