@@ -65,6 +65,31 @@ install [`ha-addon-iframe-card`](https://github.com/lovelylain/ha-addon-iframe-c
 via HACS; for the standalone container, the included plain `iframe` card pointing
 at `http://<host>:7681` works as-is.
 
+### Add Gridcoin to your Overview
+
+The integration's entities belong to a **Gridcoin** device, so they appear
+automatically on the auto-generated **Overview** dashboard (a device card) with
+no configuration. To add a compact **summary row** to any dashboard — including
+your main Overview — drop in a few **badges** (Settings → Dashboards → your
+dashboard → ⋮ → *Edit in YAML*, or the visual *Add badge* button):
+
+```yaml
+badges:
+  - type: entity
+    entity: sensor.gridcoin_wallet_total_balance
+    name: GRC Balance
+  - type: entity
+    entity: binary_sensor.gridcoin_wallet_staking
+    name: Staking
+  - type: entity
+    entity: sensor.gridcoin_wallet_estimated_time_to_stake
+    name: Next Stake
+```
+
+The same block is included at the top of `dashboards/gridcoin.yaml`. Any of the
+`sensor.gridcoin_wallet_*` entities work as badges or in a `glance`/`gauge`/
+`entities` card.
+
 ## Notes & caveats
 
 - The bundled `gridcoinresearch-tui` binary is **amd64**, statically linked Go.

@@ -7,6 +7,19 @@ title: Gridcoin
 views:
   - title: Wallet
     path: gridcoin
+    # Badges render as a compact "summary" row at the top of the view. Copy
+    # this block into any view — including your default Overview ("Home")
+    # under Settings > Dashboards — to surface Gridcoin at a glance.
+    badges:
+      - type: entity
+        entity: sensor.gridcoin_wallet_total_balance
+        name: GRC Balance
+      - type: entity
+        entity: binary_sensor.gridcoin_wallet_staking
+        name: Staking
+      - type: entity
+        entity: sensor.gridcoin_wallet_estimated_time_to_stake
+        name: Next Stake
     cards:
       - type: vertical-stack
         cards:
