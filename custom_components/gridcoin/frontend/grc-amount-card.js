@@ -31,7 +31,8 @@
  *   active: GRC           # highlighted row (defaults to `primary`)
  *   decimals: 8           # max fractional / mantissa digits
  *   scientific: false     # true → scientific notation (e.g. 1.2005e9)
- *   glyph: true           # Ǥ glyph vs. GRC ticker text
+ *   glyph: true           # true → Ǥ/mǤ/hal glyphs; false → GRC/mGRC ticker text
+ *   icon: grc:gridcoin    # optional logo on the base (non-hover) line; '' = none
  */
 
 // ── Currency model (BigInt halförds) ─────────────────────────────────────────
@@ -137,6 +138,7 @@ class GrcAmountCard extends HTMLElement {
       decimals: 8,
       scientific: false,
       glyph: true,
+      icon: '',
       ...config,
     };
     this._config.active = this._config.active || this._config.primary;
@@ -179,7 +181,7 @@ class GrcAmountCard extends HTMLElement {
         <ha-card>
           <div class="amount">
             <div class="label"></div>
-            <div class="value"><span class="num"></span> <span class="unit"></span></div>
+            <div class="value">${cfg.icon ? `<ha-icon class="ic" icon="${cfg.icon}"></ha-icon>` : ''}<span class="num"></span> <span class="unit"></span></div>
             ${cfg.hover ? `<div class="stack"><div class="rows"></div>
               <div class="foot">1 ${GRC_GLYPH} = 100,000,000 halförds</div></div>` : ''}
           </div>
@@ -188,6 +190,7 @@ class GrcAmountCard extends HTMLElement {
           .amount { position: relative; padding: 16px; }
           .label { color: var(--secondary-text-color); font-size: .85em; }
           .value { font-size: 1.6em; font-weight: 500; }
+          .ic { --mdc-icon-size: 1em; color: var(--primary-color); margin-right: 4px; vertical-align: -2px; }
           .unit { color: var(--secondary-text-color); font-size: .7em; }
           .stack {
             position: absolute; top: 100%; left: 12px; z-index: 9; min-width: 180px;
@@ -236,6 +239,7 @@ const DENOM_OPTIONS = DENOMINATIONS.map((d) => ({ value: d.id, label: d.id }));
 const EDITOR_SCHEMA = [
   { name: 'entity', required: true, selector: { entity: { domain: 'sensor' } } },
   { name: 'name', selector: { text: {} } },
+  { name: 'icon', selector: { icon: {} } },
   { type: 'grid', schema: [
     { name: 'primary', selector: { select: { mode: 'dropdown', options: DENOM_OPTIONS } } },
     { name: 'active', selector: { select: { mode: 'dropdown', options: DENOM_OPTIONS } } },
@@ -252,6 +256,7 @@ const EDITOR_SCHEMA = [
 const EDITOR_LABELS = {
   entity: 'Entity (GRC amount)',
   name: 'Name (optional)',
+  icon: 'Base icon (e.g. grc:gridcoin)',
   primary: 'Primary unit (big number)',
   active: 'Highlighted unit',
   denoms: 'Units in hover stack',
