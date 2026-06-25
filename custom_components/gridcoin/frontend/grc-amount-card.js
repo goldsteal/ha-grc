@@ -31,8 +31,12 @@
  *   active: GRC           # highlighted row (defaults to `primary`)
  *   decimals: 8           # max fractional / mantissa digits
  *   scientific: false     # true → scientific notation (e.g. 1.2005e9)
- *   glyph: true           # true → Ǥ/mǤ/hal glyphs; false → GRC/mGRC ticker text
- *   icon: grc:gridcoin    # optional logo on the base (non-hover) line; '' = none
+ *   plural: auto          # halförd form: auto (hal/hals) | singular | plural
+ *   # how the unit is shown — any combination of glyph / ticker / icon, set
+ *   # independently for the base line and the hover rows:
+ *   base_units: [icon, glyph]     # logo + Ǥ on the big number
+ *   hover_units: [glyph]          # Ǥ/mǤ/hal text in the stack
+ *   icon: grc:gridcoin            # the logo used by the 'icon' option
  */
 
 // ── Currency model (BigInt halförds) ─────────────────────────────────────────
@@ -109,19 +113,38 @@ function formatHalfords(halfords, denom, { maxDecimals = 8, scientific = false }
   return placeDecimal(scaled, show);
 }
 
-/** Singular/plural unit text for a denom at a given exact quantity. */
-function unitText(denom, halfords, glyph) {
-  const isOne = halfords === 10n ** BigInt(denom.dec);
-  if (glyph) return isOne && denom.shortOne ? denom.shortOne : denom.short;
-  return isOne && denom.labelOne ? denom.labelOne : denom.label;
+// The unit can be shown three independent ways, selectable per context
+// (base line and hover) as a set: 'glyph' (Ǥ/mǤ/hal), 'ticker' (GRC/mGRC/
+// halförd text) and/or 'icon' (a logo via ha-icon).
+const isOne = (denom, halfords) => halfords === 10n ** BigInt(denom.dec);
+
+// `plural`: 'auto' → singular only when the quantity is exactly 1; 'singular' /
+// 'plural' → force that form. Only the halförd has singular forms (hal/halförd
+// vs hals/halförds); other tickers are invariant.
+const wantSingular = (d, h, plural) =>
+  plural === 'singular' || (plural !== 'plural' && isOne(d, h));
+const glyphOf = (d, h, plural) => (d.shortOne && wantSingular(d, h, plural) ? d.shortOne : d.short);
+const tickerOf = (d, h, plural) => (d.labelOne && wantSingular(d, h, plural) ? d.labelOne : d.label);
+
+const iconHtml = (units, name) =>
+  units.includes('icon') && name ? `<ha-icon class="ic" icon="${name}"></ha-icon>` : '';
+
+/** Text unit suffix (glyph and/or ticker) for a denom at a quantity. */
+function textUnit(denom, halfords, units, plural) {
+  const parts = [];
+  if (units.includes('glyph')) parts.push(glyphOf(denom, halfords, plural));
+  if (units.includes('ticker')) parts.push(tickerOf(denom, halfords, plural));
+  return parts.join(' ');
 }
 
 function conversionStack(halfords, opts = {}) {
-  const { denoms, active, maxDecimals = 8, scientific = false, glyph = true } = opts;
+  const { denoms, active, maxDecimals = 8, scientific = false,
+          units = ['glyph'], icon = '', plural = 'auto' } = opts;
   const ids = denoms || DENOMINATIONS.map((d) => d.id);
   return DENOMINATIONS.filter((d) => ids.includes(d.id)).map((d) => ({
     id: d.id,
-    unit: unitText(d, halfords, glyph),
+    iconHtml: iconHtml(units, icon),
+    unit: textUnit(d, halfords, units, plural),
     formatted: formatHalfords(halfords, d, { maxDecimals, scientific }),
     active: d.id === active,
   }));
@@ -131,17 +154,26 @@ function conversionStack(halfords, opts = {}) {
 class GrcAmountCard extends HTMLElement {
   setConfig(config) {
     if (!config.entity) throw new Error('grc-amount-card: "entity" is required');
-    this._config = {
+    const c = {
       primary: 'GRC',
       hover: true,
       denoms: DENOMINATIONS.map((d) => d.id),
       decimals: 8,
       scientific: false,
-      glyph: true,
-      icon: '',
+      plural: 'auto',
+      icon: 'grc:gridcoin',
       ...config,
     };
-    this._config.active = this._config.active || this._config.primary;
+    // `icon` is the logo name; the 'icon' representation is toggled per context
+    // via base_units / hover_units. Migrate the legacy `glyph`/`icon` options.
+    if (c.icon === true) c.icon = 'grc:gridcoin';
+    const legacyText = config.glyph === false ? 'ticker' : 'glyph';
+    if (!config.base_units) {
+      c.base_units = [legacyText, ...(config.icon ? ['icon'] : [])];
+    }
+    if (!config.hover_units) c.hover_units = [legacyText];
+    c.active = c.active || c.primary;
+    this._config = c;
     this._rendered = false;
   }
 
@@ -162,17 +194,19 @@ class GrcAmountCard extends HTMLElement {
     const name = cfg.name || st.attributes.friendly_name || cfg.entity;
     const primary = DENOMINATIONS.find((d) => d.id === cfg.primary) || DENOMINATIONS[0];
     const big = formatHalfords(halfords, primary, { maxDecimals: cfg.decimals, scientific: cfg.scientific });
-    const unit = unitText(primary, halfords, cfg.glyph);
+    const baseIcon = iconHtml(cfg.base_units, cfg.icon);
+    const unit = textUnit(primary, halfords, cfg.base_units, cfg.plural);
 
     const stackHtml = (cfg.hover
       ? conversionStack(halfords, {
           denoms: cfg.denoms, active: cfg.active,
-          maxDecimals: cfg.decimals, scientific: cfg.scientific, glyph: cfg.glyph,
+          maxDecimals: cfg.decimals, scientific: cfg.scientific,
+          units: cfg.hover_units, icon: cfg.icon, plural: cfg.plural,
         })
       : []
     ).map((r) =>
       `<div class="row${r.active ? ' active' : ''}">
-         <span class="u">${r.unit}</span>
+         <span class="u">${r.iconHtml}${r.unit}</span>
          <span class="v">${r.formatted}</span>
        </div>`).join('');
 
@@ -181,7 +215,7 @@ class GrcAmountCard extends HTMLElement {
         <ha-card>
           <div class="amount">
             <div class="label"></div>
-            <div class="value">${cfg.icon ? `<ha-icon class="ic" icon="${cfg.icon}"></ha-icon>` : ''}<span class="num"></span> <span class="unit"></span></div>
+            <div class="value">${baseIcon}<span class="num"></span> <span class="unit"></span></div>
             ${cfg.hover ? `<div class="stack"><div class="rows"></div>
               <div class="foot">1 ${GRC_GLYPH} = 100,000,000 halförds</div></div>` : ''}
           </div>
@@ -235,35 +269,48 @@ customElements.define('grc-amount-card', GrcAmountCard);
 
 // ── GUI config editor (ha-form based) ────────────────────────────────────────
 const DENOM_OPTIONS = DENOMINATIONS.map((d) => ({ value: d.id, label: d.id }));
+const UNIT_OPTIONS = [
+  { value: 'glyph', label: 'Glyph (Ǥ)' },
+  { value: 'ticker', label: 'Ticker (GRC)' },
+  { value: 'icon', label: 'Logo icon' },
+];
 
 const EDITOR_SCHEMA = [
   { name: 'entity', required: true, selector: { entity: { domain: 'sensor' } } },
   { name: 'name', selector: { text: {} } },
-  { name: 'icon', selector: { icon: {} } },
   { type: 'grid', schema: [
     { name: 'primary', selector: { select: { mode: 'dropdown', options: DENOM_OPTIONS } } },
     { name: 'active', selector: { select: { mode: 'dropdown', options: DENOM_OPTIONS } } },
   ] },
   { name: 'denoms', selector: { select: { multiple: true, options: DENOM_OPTIONS } } },
+  { name: 'base_units', selector: { select: { multiple: true, options: UNIT_OPTIONS } } },
+  { name: 'hover_units', selector: { select: { multiple: true, options: UNIT_OPTIONS } } },
+  { name: 'icon', selector: { icon: {} } },
+  { name: 'plural', selector: { select: { mode: 'dropdown', options: [
+    { value: 'auto', label: 'Auto (hal / hals by count)' },
+    { value: 'singular', label: 'Always singular (hal)' },
+    { value: 'plural', label: 'Always plural (hals)' },
+  ] } } },
   { type: 'grid', schema: [
     { name: 'decimals', selector: { number: { min: 0, max: 8, mode: 'box' } } },
     { name: 'hover', selector: { boolean: {} } },
     { name: 'scientific', selector: { boolean: {} } },
-    { name: 'glyph', selector: { boolean: {} } },
   ] },
 ];
 
 const EDITOR_LABELS = {
   entity: 'Entity (GRC amount)',
   name: 'Name (optional)',
-  icon: 'Base icon (e.g. grc:gridcoin)',
+  icon: 'Logo icon (for the "Logo" unit option)',
   primary: 'Primary unit (big number)',
   active: 'Highlighted unit',
-  denoms: 'Units in hover stack',
+  denoms: 'Denominations in hover stack',
+  base_units: 'Base line — show as',
+  hover_units: 'Hover rows — show as',
+  plural: 'Halförd singular/plural',
   decimals: 'Max decimals',
   hover: 'Show hover conversions',
   scientific: 'Scientific notation',
-  glyph: 'Use Ǥ glyph',
 };
 
 class GrcAmountCardEditor extends HTMLElement {
