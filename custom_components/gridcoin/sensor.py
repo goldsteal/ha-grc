@@ -31,6 +31,24 @@ def _nested(data: dict[str, Any], *path: str) -> Any:
     return cur
 
 
+def _total_balance(data: dict[str, Any]) -> float:
+    """Spendable balance plus the maturing staked mint.
+
+    Gridcoin's ``getinfo`` reports the immature staked coins under *both*
+    ``stake`` and ``newmint`` (the two fields are identical while staking), so
+    summing all three double-counts that pool. Take the larger of the two to
+    avoid it. Matches the wallet overview's Total = Available + Staking.
+    """
+    balance = _nested(data, "info", "balance")
+    stake = _nested(data, "info", "stake")
+    newmint = _nested(data, "info", "newmint")
+    immature = max(
+        (v for v in (stake, newmint) if isinstance(v, (int, float))),
+        default=0,
+    )
+    return (balance if isinstance(balance, (int, float)) else 0) + immature
+
+
 @dataclass(frozen=True, kw_only=True)
 class GridcoinSensorDescription(SensorEntityDescription):
     """Describes a Gridcoin sensor."""
@@ -73,15 +91,7 @@ SENSORS: tuple[GridcoinSensorDescription, ...] = (
         icon="mdi:wallet",
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
-        value_fn=lambda d: sum(
-            v
-            for v in (
-                _nested(d, "info", "balance"),
-                _nested(d, "info", "stake"),
-                _nested(d, "info", "newmint"),
-            )
-            if isinstance(v, (int, float))
-        ),
+        value_fn=_total_balance,
     ),
     GridcoinSensorDescription(
         key="block_height",
