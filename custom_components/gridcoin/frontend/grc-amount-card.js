@@ -32,6 +32,10 @@
  *   decimals: 8           # max fractional / mantissa digits
  *   scientific: false     # true → scientific notation (e.g. 1.2005e9)
  *   plural: auto          # halförd form: auto (hal/hals) | singular | plural
+ *   number_format: language  # decimal/thousands separators; follows the user's
+ *                            # HA setting. Override: comma_decimal (1,234.56) |
+ *                            # decimal_comma (1.234,56) | space_comma (1 234,56) |
+ *                            # none (1234.56)
  *   # how the unit is shown — any combination of glyph / ticker / icon, set
  *   # independently for the base line and the hover rows:
  *   base_units: [icon, glyph]     # logo + Ǥ on the big number
@@ -65,7 +69,34 @@ function grcToHalfords(grcStr) {
   return neg ? -h : h;
 }
 
-const group = (s) => s.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+// Number formatting follows locale conventions: a group (thousands) separator
+// and a decimal separator. Mirrors Home Assistant's own NumberFormat setting
+// (hass.locale.number_format) so a German wallet shows 1.234,56 with no config.
+const SEP_DEFAULT = { group: ',', decimal: '.' };
+const SEP_FIXED = {
+  comma_decimal: { group: ',', decimal: '.' },       // 1,234.56
+  decimal_comma: { group: '.', decimal: ',' },       // 1.234,56
+  space_comma: { group: ' ', decimal: ',' },         // 1 234,56
+  none: { group: '', decimal: '.' },                 // 1234.56
+};
+
+/** Resolve {group, decimal} from a `number_format` option, falling back to the
+ *  user's Home Assistant locale (and then Intl) when set to 'language'. */
+function resolveSeparators(format, hass) {
+  if (SEP_FIXED[format]) return SEP_FIXED[format];
+  const haFmt = hass && hass.locale && hass.locale.number_format;
+  if (SEP_FIXED[haFmt]) return SEP_FIXED[haFmt];
+  const lang = (hass && hass.locale && hass.locale.language) || undefined;
+  try {
+    const parts = new Intl.NumberFormat(lang).formatToParts(1111111.1);
+    const pick = (t, d) => (parts.find((p) => p.type === t) || {}).value || d;
+    return { group: pick('group', ','), decimal: pick('decimal', '.') };
+  } catch {
+    return SEP_DEFAULT;
+  }
+}
+
+const group = (s, g = ',') => (g ? s.replace(/\B(?=(\d{3})+(?!\d))/g, g) : s);
 
 /** Round a BigInt division half-up (away from zero on the .5 boundary). */
 function roundDiv(n, d) {
@@ -77,18 +108,18 @@ function roundDiv(n, d) {
 }
 
 /** Place a decimal point `dec` digits from the right of a BigInt, trim zeros. */
-function placeDecimal(n, dec) {
+function placeDecimal(n, dec, sep = SEP_DEFAULT) {
   const neg = n < 0n;
   let s = (neg ? -n : n).toString();
-  if (dec === 0) return (neg ? '-' : '') + group(s);
+  if (dec === 0) return (neg ? '-' : '') + group(s, sep.group);
   s = s.padStart(dec + 1, '0');
-  const int = group(s.slice(0, -dec));
+  const int = group(s.slice(0, -dec), sep.group);
   const frac = s.slice(-dec).replace(/0+$/, '');
-  return (neg ? '-' : '') + (frac ? `${int}.${frac}` : int);
+  return (neg ? '-' : '') + (frac ? `${int}${sep.decimal}${frac}` : int);
 }
 
 /** Scientific notation of (BigInt halförds / 10^dec), mantissa ≤ `sig` digits. */
-function toScientific(halfords, dec, sig) {
+function toScientific(halfords, dec, sig, sep = SEP_DEFAULT) {
   if (halfords === 0n) return '0';
   const neg = halfords < 0n;
   let digits = (neg ? -halfords : halfords).toString();
@@ -100,17 +131,17 @@ function toScientific(halfords, dec, sig) {
     digits = rs;
   }
   const frac = digits.slice(1).replace(/0+$/, '');
-  return `${neg ? '-' : ''}${digits[0]}${frac ? '.' + frac : ''}e${exp}`;
+  return `${neg ? '-' : ''}${digits[0]}${frac ? sep.decimal + frac : ''}e${exp}`;
 }
 
 /** Format BigInt halförds in a denomination. */
-function formatHalfords(halfords, denom, { maxDecimals = 8, scientific = false } = {}) {
-  if (scientific) return toScientific(halfords, denom.dec, maxDecimals + 1);
+function formatHalfords(halfords, denom, { maxDecimals = 8, scientific = false, sep = SEP_DEFAULT } = {}) {
+  if (scientific) return toScientific(halfords, denom.dec, maxDecimals + 1, sep);
   const show = Math.min(maxDecimals, denom.dec);
   const scaled = denom.dec > show
     ? roundDiv(halfords, 10n ** BigInt(denom.dec - show))
     : halfords;
-  return placeDecimal(scaled, show);
+  return placeDecimal(scaled, show, sep);
 }
 
 // The unit can be shown three independent ways, selectable per context
@@ -139,13 +170,13 @@ function textUnit(denom, halfords, units, plural) {
 
 function conversionStack(halfords, opts = {}) {
   const { denoms, active, maxDecimals = 8, scientific = false,
-          units = ['glyph'], icon = '', plural = 'auto' } = opts;
+          units = ['glyph'], icon = '', plural = 'auto', sep = SEP_DEFAULT } = opts;
   const ids = denoms || DENOMINATIONS.map((d) => d.id);
   return DENOMINATIONS.filter((d) => ids.includes(d.id)).map((d) => ({
     id: d.id,
     iconHtml: iconHtml(units, icon),
     unit: textUnit(d, halfords, units, plural),
-    formatted: formatHalfords(halfords, d, { maxDecimals, scientific }),
+    formatted: formatHalfords(halfords, d, { maxDecimals, scientific, sep }),
     active: d.id === active,
   }));
 }
@@ -161,6 +192,7 @@ class GrcAmountCard extends HTMLElement {
       decimals: 8,
       scientific: false,
       plural: 'auto',
+      number_format: 'language',
       icon: 'grc:gridcoin',
       ...config,
     };
@@ -192,8 +224,9 @@ class GrcAmountCard extends HTMLElement {
       return;
     }
     const name = cfg.name || st.attributes.friendly_name || cfg.entity;
+    const sep = resolveSeparators(cfg.number_format, this._hass);
     const primary = DENOMINATIONS.find((d) => d.id === cfg.primary) || DENOMINATIONS[0];
-    const big = formatHalfords(halfords, primary, { maxDecimals: cfg.decimals, scientific: cfg.scientific });
+    const big = formatHalfords(halfords, primary, { maxDecimals: cfg.decimals, scientific: cfg.scientific, sep });
     const baseIcon = iconHtml(cfg.base_units, cfg.icon);
     const unit = textUnit(primary, halfords, cfg.base_units, cfg.plural);
 
@@ -201,7 +234,7 @@ class GrcAmountCard extends HTMLElement {
       ? conversionStack(halfords, {
           denoms: cfg.denoms, active: cfg.active,
           maxDecimals: cfg.decimals, scientific: cfg.scientific,
-          units: cfg.hover_units, icon: cfg.icon, plural: cfg.plural,
+          units: cfg.hover_units, icon: cfg.icon, plural: cfg.plural, sep,
         })
       : []
     ).map((r) =>
@@ -217,7 +250,7 @@ class GrcAmountCard extends HTMLElement {
             <div class="label"></div>
             <div class="value">${baseIcon}<span class="num"></span> <span class="unit"></span></div>
             ${cfg.hover ? `<div class="stack"><div class="rows"></div>
-              <div class="foot">1 ${GRC_GLYPH} = 100,000,000 halförds</div></div>` : ''}
+              <div class="foot">1 ${GRC_GLYPH} = ${group('100000000', sep.group)} halförds</div></div>` : ''}
           </div>
         </ha-card>
         <style>
@@ -291,6 +324,13 @@ const EDITOR_SCHEMA = [
     { value: 'singular', label: 'Always singular (hal)' },
     { value: 'plural', label: 'Always plural (hals)' },
   ] } } },
+  { name: 'number_format', selector: { select: { mode: 'dropdown', options: [
+    { value: 'language', label: 'Follow Home Assistant setting' },
+    { value: 'comma_decimal', label: '1,234.56' },
+    { value: 'decimal_comma', label: '1.234,56' },
+    { value: 'space_comma', label: '1 234,56' },
+    { value: 'none', label: '1234.56' },
+  ] } } },
   { type: 'grid', schema: [
     { name: 'decimals', selector: { number: { min: 0, max: 8, mode: 'box' } } },
     { name: 'hover', selector: { boolean: {} } },
@@ -308,6 +348,7 @@ const EDITOR_LABELS = {
   base_units: 'Base line — show as',
   hover_units: 'Hover rows — show as',
   plural: 'Halförd singular/plural',
+  number_format: 'Number format (decimal / thousands)',
   decimals: 'Max decimals',
   hover: 'Show hover conversions',
   scientific: 'Scientific notation',
