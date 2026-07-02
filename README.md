@@ -95,5 +95,3 @@ The same block is included at the top of `dashboards/gridcoin.yaml`. Any of the
 - The bundled `gridcoinresearch-tui` binary is **amd64**, statically linked Go.
 - RPC credentials live in HA config / add-on options — keep your HA instance
   trusted; prefer a dedicated read-mostly RPC user.
-- Update the GitHub URLs/`codeowners` in `manifest.json`, `hacs.json`,
-  `repository.yaml`, and `config.yaml` to your actual repo before publishing.
